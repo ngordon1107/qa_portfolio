@@ -1,0 +1,1 @@
+{"supervisors": {"Test Supervisor": {"emp_num": 123, "shift": "DAY", "salary": 51000, "max_workers": 2, "array_of_prod_workers": ["Test Worker"]}}, "workers": {"Test Worker": {"emp_num": 456, "shift": "DAY", "pay_rate": 10.0, "hours_worked": 10, "assigned_supervisor_name": "Test Supervisor"}}}
