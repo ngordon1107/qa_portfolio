@@ -1,4 +1,4 @@
-import subprocess
+# import subprocess
 import pytest
 from random import randint
 from playwright.sync_api import Page, expect
@@ -20,15 +20,14 @@ test_data = {
         "ssn": "123-45-6789",
         "username": f"user_{random_num}" # making random to avoid flakiness -- server doesn't allow to delete registrations and back-to-back testing causes "user already exists" errors
     }
-    
 }
 # Setup Fixtures  -------------------------------------------------------
 # @pytest.fixture(scope="session", autouse=True)
 # def restart_parabank_container():
-#     print("💅 Restarting ParaBank container before tests...")
+#     print("Restarting ParaBank container before tests...")
 #     subprocess.run(["docker", "restart", "parabank"], check=True)
 #     yield
-#     print("🧼 Restarting ParaBank container after tests...")
+#     print("Restarting ParaBank container after tests...")
 #     subprocess.run(["docker", "restart", "parabank"], check=True)
 
 @pytest.fixture(scope="function", autouse=True)
@@ -106,7 +105,6 @@ def test_registration(page: Page):
     print(f"username during registration: {test_data['login']['username']}")
     expect(header).to_contain_text(f"Welcome {test_data["login"]["username"]}")
 
-
 def test_login(page: Page, login):
     # Arrange
     header = page.locator("p.smallText")
@@ -115,7 +113,6 @@ def test_login(page: Page, login):
 
     # Assert
     expect(header).to_contain_text(f"Welcome {test_data['login']['first_name']} {test_data['login']['last_name']}")
-
 
 def test_logout(page: Page, login, logout):
     # Arrange
@@ -128,12 +125,71 @@ def test_logout(page: Page, login, logout):
     new_side_panel_header = page.locator("h2")
 
     # Assert
-    original_side_panel_header == f"Welcome {test_data['login']['first_name']} {test_data['login']['last_name']}"
+    assert original_side_panel_header == f"Welcome {test_data['login']['first_name']} {test_data['login']['last_name']}"
     expect(new_side_panel_header).to_contain_text("Customer Login")
 
-@pytest.mark.skip(reason="not implemented yet")
 def test_bill_pay(page: Page, login):
-    pass
+    # Arrange
+    bill_pay_link = page.get_by_role("link", name="Bill Pay")
+    # pulling account number from account overview page
+    verified_account_num = page.locator("table td:nth-child(1) a").text_content()
+    payee_name_input = "PSEG"
+    payee_address_input = "123 Presidents St"
+    payee_city_input = "Edison"
+    payee_state_input = "NJ"
+    payee_zip_input = "54321"
+    payee_phone_input = "0987654321"
+    payee_account_num_input = "29010"
+    amount_input = "500"
+
+    # Act
+    bill_pay_link.click()
+    page_header_element = page.wait_for_selector("div#billpayForm h1", state="visible")
+    page_header = page_header_element.inner_text()
+    # bill pay fields
+    payee_name = page.locator("input[name='payee.name']")
+    payee_address = page.locator("input[name='payee.address.street']")
+    payee_city = page.locator("input[name='payee.address.city']")
+    payee_state = page.locator("input[name='payee.address.state']")
+    payee_zip = page.locator("input[name='payee.address.zipCode']")
+    payee_phone = page.locator("input[name='payee.phoneNumber']")
+    payee_account_num = page.locator("input[name='payee.accountNumber']")
+    payee_verify_account_num = page.locator("input[name='verifyAccount']")
+    amount = page.locator("input[name='amount']")
+
+    account_num_displayed_to_user = (page.locator("option")).text_content()
+    account_num_actual_value = (page.locator("option")).get_attribute("value")
+    submit_button = page.get_by_role("button", name="Send Payment")
+
+    # filling fields
+    payee_name.fill(payee_name_input)
+    payee_address.fill(payee_address_input)
+    payee_city.fill(payee_city_input)
+    payee_state.fill(payee_state_input)
+    payee_zip.fill(payee_zip_input)
+    payee_phone.fill(payee_phone_input)
+    payee_account_num.fill(payee_account_num_input)
+    payee_verify_account_num.fill(payee_account_num_input)
+    amount.fill(amount_input)
+
+    # submitting form
+    submit_button.click()
+
+    status_header = page.locator("div#billpayResult h1")
+    status_message_element = page.wait_for_selector("div#billpayResult p", state="visible")
+    status_message = status_message_element.inner_text()
+
+    # Assert
+    # validating that the account number on the bill pay form is correct
+    assert account_num_actual_value == account_num_displayed_to_user
+    assert verified_account_num == account_num_displayed_to_user
+    # validating the header of the bill pay page
+    assert page_header == "Bill Payment Service"
+
+    # validating header and status message indicate a successful submission
+    expect(status_header).to_contain_text("Bill Payment Complete")
+    assert f"Bill Payment to {payee_name_input} in the amount of ${float(amount_input):.2f} from account {verified_account_num} was successful" in status_message
+
 
 @pytest.mark.skip(reason="not implemented yet")
 def test_transfer_funds(page: Page, login):
