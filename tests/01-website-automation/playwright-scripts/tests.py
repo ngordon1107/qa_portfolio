@@ -128,9 +128,11 @@ def test_logout(page: Page, login, logout):
     assert original_side_panel_header == f"Welcome {test_data['login']['first_name']} {test_data['login']['last_name']}"
     expect(new_side_panel_header).to_contain_text("Customer Login")
 
+#@pytest.mark.skip(reason="completed, skipping to more relevant tests")
 def test_bill_pay(page: Page, login):
     # Arrange
     bill_pay_link = page.get_by_role("link", name="Bill Pay")
+    original_account_balance = float((page.locator("table#accountTable tr:nth-child(1) td:nth-child(2)").text_content().strip("$")))
     # pulling account number from account overview page
     verified_account_num = page.locator("table td:nth-child(1) a").text_content()
     payee_name_input = "PSEG"
@@ -175,9 +177,14 @@ def test_bill_pay(page: Page, login):
     # submitting form
     submit_button.click()
 
-    status_header = page.locator("div#billpayResult h1")
+    status_header = page.locator("div#billpayResult h1").text_content()
     status_message_element = page.wait_for_selector("div#billpayResult p", state="visible")
     status_message = status_message_element.inner_text()
+
+    # returning to accounts overview
+    accounts_overview_link = page.get_by_role("link", name="Accounts Overview")
+    accounts_overview_link.click()
+    account_balance = float((page.locator("table#accountTable tr:nth-child(1) td:nth-child(2)").text_content()).strip("$"))
 
     # Assert
     # validating that the account number on the bill pay form is correct
@@ -187,9 +194,11 @@ def test_bill_pay(page: Page, login):
     assert page_header == "Bill Payment Service"
 
     # validating header and status message indicate a successful submission
-    expect(status_header).to_contain_text("Bill Payment Complete")
+    assert "Bill Payment Complete" in status_header
     assert f"Bill Payment to {payee_name_input} in the amount of ${float(amount_input):.2f} from account {verified_account_num} was successful" in status_message
 
+    # verifying account balance has successfully updated after bill pay
+    assert account_balance == (original_account_balance - float(amount_input))
 
 @pytest.mark.skip(reason="not implemented yet")
 def test_transfer_funds(page: Page, login):
