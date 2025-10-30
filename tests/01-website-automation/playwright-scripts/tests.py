@@ -66,6 +66,27 @@ def logout(page: Page):
         print("successfully logged out")
     return __logout
 
+@pytest.fixture
+def open_new_account(page: Page, login):
+    def __params(account_type, deposit_from_account):
+        # Arrange
+        open_new_account_link = page.get_by_role("link", name="Open New Account")
+        account_type_input = account_type.upper()
+        deposit_from_account_input = str(deposit_from_account)
+
+        # Act
+        open_new_account_link.click()
+        account_type_dropdown = page.locator("select#type")
+        account_type_dropdown.select_option(value=account_type_input)
+
+        deposit_from_amount_dropdown = page.locator("select#fromAccountId")
+        deposit_from_amount_dropdown.select_option(value=deposit_from_account_input)
+
+        submit_button = page.get_by_role("button", name="Open New Account")
+        submit_button.click()
+
+    return __params
+
 # Test Suite -------------------------------------------------------
 def test_registration(page: Page):
     # Arrange
@@ -128,7 +149,7 @@ def test_logout(page: Page, login, logout):
     assert original_side_panel_header == f"Welcome {test_data['login']['first_name']} {test_data['login']['last_name']}"
     expect(new_side_panel_header).to_contain_text("Customer Login")
 
-#@pytest.mark.skip(reason="completed, skipping to more relevant tests")
+@pytest.mark.skip(reason="completed, skipping to more relevant tests")
 def test_bill_pay(page: Page, login):
     # Arrange
     bill_pay_link = page.get_by_role("link", name="Bill Pay")
@@ -200,9 +221,38 @@ def test_bill_pay(page: Page, login):
     # verifying account balance has successfully updated after bill pay
     assert account_balance == (original_account_balance - float(amount_input))
 
+def test_open_new_account(page: Page, open_new_account):
+    # Arrange
+    account_type_input = "SAVINGS"
+    deposit_from_account = (page.locator("table#accountTable tbody tr:nth-child(1) td:nth-child(1)").inner_text()).strip()
+    print("deposit_from_account: ", deposit_from_account)
+    # Act
+    open_new_account(account_type_input, deposit_from_account)
+    page_header_element = page.wait_for_selector("div#openAccountResult h1", state="visible")
+    page_header = page_header_element.inner_text()
+
+    # Assert
+    assert page_header == "Account Opened!"
+
+    # checking the length of the new account number is valid == 5
+    new_account_num = page.locator("p a#newAccountId").text_content()
+    print("new_account_num: ", new_account_num)
+    assert len(new_account_num) == 5
+
 @pytest.mark.skip(reason="not implemented yet")
-def test_transfer_funds(page: Page, login):
-    pass
+def test_transfer_funds(page: Page, open_new_account):
+    # Arrange
+    transfer_link = page.get_by_role("link", name="Transfer Funds")
+    # amount_input = "1000"
+    # from_account_input =
+    # to_account_input =
+
+    # Act
+    transfer_link.click()
+    page_title = page.locator("h1").text_content()
+    # amount_box =
+    from_account_dropdown = page.locator("select#fromAccountId option")
+    to_account_dropdown = page.locator("select#toAccountId")
 
 @pytest.mark.skip(reason="not implemented yet")
 def test_check_account_overview(page: Page, login):
